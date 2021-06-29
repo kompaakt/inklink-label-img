@@ -1,0 +1,16 @@
+{
+  "name": "label-img",
+  "version": "1.0.0",
+  "description": "",
+  "main": "download-sample-posts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.935.0",
+    "mongodb": "^3.6.9",
+    "p-limit": "^3.1.0"
+  }
+}
