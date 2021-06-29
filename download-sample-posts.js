@@ -6,8 +6,6 @@ const util = require("util");
 
 const dbName = "inklink-scrape";
 
-const limit = pLimit(128);
-
 var ep = new aws.Endpoint("s3.us-west-000.backblazeb2.com");
 var s3 = new aws.S3({ endpoint: ep, region: "us-west-000" });
 
@@ -20,9 +18,9 @@ var ca = [fs.readFileSync(__dirname + "/ya.crt")];
 
 const url = util.format(
   "mongodb://%s:%s@%s/?replicaSet=%s&authSource=%s&ssl=true",
-  process.env.mongoUser,
-  process.env.mongoPassword,
-  [process.env.mongoUrl].join(","),
+  process.env.MONGO_USER,
+  process.env.MONGO_PASSWORD,
+  [process.env.MONGO_HOST].join(","),
   "rs01",
   "db1"
 );
@@ -44,7 +42,7 @@ const url = util.format(
 
   const posts = [];
 
-  const cur = col.aggregate(JSON.parse(process.env.mongoQuery) ?? [], {
+  const cur = col.aggregate(JSON.parse(process.env.MONGO_QUERY) ?? [], {
     allowDiskUse: true,
   });
 
@@ -54,34 +52,32 @@ const url = util.format(
 
   fs.mkdirSync("./dataset");
 
-  const ps = posts.map((doc) =>
-    limit(
-      () =>
-        new Promise(async (resolve, reject) => {
-          const fileId =
-            doc.ownerUsername + "/" + +new Date(doc.timestamp) + "_0.jpg";
+  const ps = posts.map(
+    (doc) =>
+      new Promise(async (resolve, reject) => {
+        const fileId =
+          doc.ownerUsername + "/" + +new Date(doc.timestamp) + "_0.jpg";
 
-          const fileName =
-            doc.ownerUsername + "_" + +new Date(doc.timestamp) + "_0.jpg";
+        const fileName =
+          doc.ownerUsername + "_" + +new Date(doc.timestamp) + "_0.jpg";
 
-          console.log("download ", fileName);
-
-          var file = fs.createWriteStream("./dataset/" + fileName);
-          await new Promise((rs, rj) => {
-            s3.getObject({ Bucket: bucketName, Key: fileId })
-              .createReadStream()
-              .on("end", () => {
-                rs();
-              })
-              .on("error", (error) => {
-                rj(error);
-              })
-              .pipe(file);
-          })
-            .then(() => resolve())
-            .catch(() => reject());
+        var file = fs.createWriteStream("./dataset/" + fileName);
+        await new Promise((rs, rj) => {
+          s3.getObject({ Bucket: bucketName, Key: fileId })
+            .createReadStream()
+            .on("end", () => {
+              rs();
+            })
+            .on("error", (error) => {
+              console.log(error);
+              file.end();
+              rj(error);
+            })
+            .pipe(file);
         })
-    )
+          .then(() => resolve())
+          .catch(() => reject());
+      })
   );
 
   Promise.allSettled(ps).then(() => {
