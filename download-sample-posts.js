@@ -1,7 +1,6 @@
 const MongoClient = require("mongodb").MongoClient;
 const fs = require("fs");
 const aws = require("aws-sdk");
-const pLimit = require("p-limit");
 const util = require("util");
 
 const dbName = "inklink-scrape";
